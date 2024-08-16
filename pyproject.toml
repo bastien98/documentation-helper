@@ -1,0 +1,39 @@
+[tool.poetry]
+name = "documentation-helper"
+version = "0.1.0"
+description = ""
+authors = ["Bastien Moenaert <bastien.moenaert@persgroep.net>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+langchain = "*"
+beautifulsoup4 = "*"
+black = "*"
+tiktoken = "*"
+openai = "*"
+pinecone-client = "*"
+unstructured = "*"
+nltk = "*"
+fastapi = "*"
+jinja2 = "*"
+uvicorn = "*"
+streamlit = "*"
+streamlit-chat = "*"
+tqdm = "*"
+langchain-pinecone = "*"
+langchain-openai = "*"
+langchain-community = "*"
+isort = "*"
+langchainhub = "*"
+firecrawl-py = "*"
+
+[tool.poetry.group.dev.dependencies]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.extras]
+python_version = ["3.11"]
+python_full_version = ["3.11.0"]
