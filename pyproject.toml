@@ -27,6 +27,7 @@ langchain-community = "*"
 isort = "*"
 langchainhub = "*"
 firecrawl-py = "*"
+pydantic = "1.10.17"
 
 [tool.poetry.group.dev.dependencies]
 

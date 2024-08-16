@@ -1,77 +1,43 @@
 import os
-
 from dotenv import load_dotenv
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_openai import OpenAIEmbeddings
 
 load_dotenv()
-
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import ReadTheDocsLoader
-from langchain_openai import OpenAIEmbeddings
-from langchain_pinecone import PineconeVectorStore
-
-from consts import INDEX_NAME
-
-embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+from langchain_pinecone import Pinecone
 
 
-def ingest_docs():
-    loader = ReadTheDocsLoader("langchain-docs/api.python.langchain.com/en/latest")
+# Function to process a single PDF file
+def process_pdf(file_path, index_name):
+    # Load PDF
+    loader = PyPDFLoader(file_path)
+    documents = loader.load()
 
-    raw_documents = loader.load()
-    print(f"loaded {len(raw_documents)} documents")
+    # Split text into chunks
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    texts = text_splitter.split_documents(documents)
 
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=600, chunk_overlap=50)
-    documents = text_splitter.split_documents(raw_documents)
-    for doc in documents:
-        new_url = doc.metadata["source"]
-        new_url = new_url.replace("langchain-docs", "https:/")
-        doc.metadata.update({"source": new_url})
+    # Create embeddings
+    embeddings = OpenAIEmbeddings()
 
-    print(f"Going to add {len(documents)} to Pinecone")
-    PineconeVectorStore.from_documents(documents, embeddings, index_name=INDEX_NAME)
-    print("****Loading to vectorstore done ***")
-
-
-def ingest_docs2() -> None:
-    from langchain_community.document_loaders import FireCrawlLoader
-
-    langchain_documents_base_urls = [
-        "https://python.langchain.com/v0.2/docs/integrations/chat/",
-        "https://python.langchain.com/v0.2/docs/integrations/llms/",
-        "https://python.langchain.com/v0.2/docs/integrations/text_embedding/",
-        "https://python.langchain.com/v0.2/docs/integrations/document_loaders/",
-        "https://python.langchain.com/v0.2/docs/integrations/document_transformers/",
-        "https://python.langchain.com/v0.2/docs/integrations/vectorstores/",
-        "https://python.langchain.com/v0.2/docs/integrations/retrievers/",
-        "https://python.langchain.com/v0.2/docs/integrations/tools/",
-        "https://python.langchain.com/v0.2/docs/integrations/stores/",
-        "https://python.langchain.com/v0.2/docs/integrations/llm_caching/",
-        "https://python.langchain.com/v0.2/docs/integrations/graphs/",
-        "https://python.langchain.com/v0.2/docs/integrations/memory/",
-        "https://python.langchain.com/v0.2/docs/integrations/callbacks/",
-        "https://python.langchain.com/v0.2/docs/integrations/chat_loaders/",
-        "https://python.langchain.com/v0.2/docs/concepts/",
-    ]
-    langchain_documents_base_urls2 = [langchain_documents_base_urls[0]]
-    for url in langchain_documents_base_urls:
-        print(f"FireCrawling {url=}")
-        loader = FireCrawlLoader(
-            url=url,
-            mode="crawl",
-            params={
-                "crawlerOptions": {"limit": 5},
-                "pageOptions": {"onlyMainContent": True},
-                "wait_until_done": True,
-            },
-        )
-        docs = loader.load()
-
-        print(f"Going to add {len(docs)} documents to Pinecone")
-        PineconeVectorStore.from_documents(
-            docs, embeddings, index_name="firecrawl-index"
-        )
-        print(f"****Loading {url}* to vectorstore done ***")
+    # Upload to Pinecone
+    vectorstore_from_docs = Pinecone.from_documents(
+        texts,
+        index_name=index_name,
+        embedding=embeddings
+    )
 
 
-if __name__ == "__main__":
-    ingest_docs2()
+# Main function to process all PDFs in a directory
+def ingest_pdfs(directory_path, index_name):
+    for filename in os.listdir(directory_path):
+        if filename.endswith(".pdf"):
+            file_path = os.path.join(directory_path, filename)
+            print(f"Processing {filename}...")
+            process_pdf(file_path, index_name)
+    print("All PDFs processed and ingested into Pinecone.")
+
+
+# Usage
+ingest_pdfs("data", "documentation-helper")
